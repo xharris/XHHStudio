@@ -1,3 +1,0 @@
-function Object:collisionEnd(other)
-	self.colliding = false
-	--self.fixture:setGroupIndex(1)
