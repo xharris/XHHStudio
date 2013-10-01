@@ -1,0 +1,16 @@
+function Object:inCollision(other)
+	self.colliding = other
+	DBG.print(other.name..' '..tostring(self.stop_on_collision))
+
+	--[[
+	if self.stop_on_collision or other.stop_on_collision then
+		if self.fixture:isSensor() then self.fixture:setSensor(false) end
+		--if other.fixture:isSensor() then other.fixture:setSensor(false) end
+		--self.fixture:setGroupIndex(1)
+	else
+		if not self.fixture:isSensor() then self.fixture:setSensor(true) end
+		--if not other.fixture:isSensor() then other.fixture:setSensor(true) end
+		--self.fixture:setGroupIndex(-1)
+	end
+	]]
+	

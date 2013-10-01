@@ -1,0 +1,1 @@
+function Object:mousepress(x,y,button)

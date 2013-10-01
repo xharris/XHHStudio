@@ -1,0 +1,2 @@
+function Object:collisionEnd(other)
+	self.colliding = false

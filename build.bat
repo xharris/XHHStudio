@@ -1,0 +1,1 @@
+F:\Portable_Python_2.7.3.1\App\python.exe setup.py py2exe
