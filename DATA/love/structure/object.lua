@@ -53,6 +53,8 @@ class "Object"{
 	bottom=0;
 	left=0;
 	right=0;
+	
+	dead=false;
 }
 
 function Object:__init(...)
@@ -89,6 +91,7 @@ function Object:__init(...)
 end
 
 function Object:destroy(args)
+	self.dead=true
 	id = self.id
 	self:onDestroy(args)
 	for k,d in ipairs(objects) do
@@ -135,7 +138,7 @@ function Object:update(dt)
 	prevx=self.x
 	prevy=self.y
 	self.prevz=self.z
-	
+
 	self.top = self.y
 	self.bottom = self.y + self.img_height
 	self.left = self.x
@@ -143,38 +146,40 @@ function Object:update(dt)
 
 	--if self.colliding then self.inCollision(self.colliding) end
 	if notNil(self.onUpdate) then self:onUpdate(dt) end
+	
+	if not self.dead then
+		self.vspeed = self.vspeed + (self.gravity*dt)
 
-	self.vspeed = self.vspeed + (self.gravity*dt)
+		amplify = 50
 
-	amplify = 50
+		linvelx = 0
+		linvely = 0
 
-	linvelx = 0
-	linvely = 0
+		if self.y ~= prevy then 
+			self.body:setY(self.y)
+			linvelx = self.hspeed
+		else
+			linvelx = self.hspeed
+		end
+		if self.x ~= prevx then 
+			self.body:setX(self.x)
+			linvely = self.vspeed
+		else
+			linvely = self.vspeed
+		end
 
-	if self.y ~= prevy then 
-		self.body:setY(self.y)
-		linvelx = self.hspeed
-	else
-		linvelx = self.hspeed
+		dir_x = math.cos(math.rad(self.direction)-math.rad(90))*self.speed
+		dir_y = math.sin(math.rad(self.direction)-math.rad(90))*self.speed
+
+		self.body:setLinearVelocity((linvelx+dir_x)*amplify,(linvely+dir_y)*amplify)
+		self.body:setAngle(math.rad(self.img_angle))
+
+		self.x = self.body:getX()
+		self.y = self.body:getY()
+
+		self.last_frame = self.img_frame
+		self.anim:update(dt)
 	end
-	if self.x ~= prevx then 
-		self.body:setX(self.x)
-		linvely = self.vspeed
-	else
-		linvely = self.vspeed
-	end
-
-	dir_x = math.cos(math.rad(self.direction)-math.rad(90))*self.speed
-	dir_y = math.sin(math.rad(self.direction)-math.rad(90))*self.speed
-
-	self.body:setLinearVelocity((linvelx+dir_x)*amplify,(linvely+dir_y)*amplify)
-	self.body:setAngle(math.rad(self.img_angle))
-
-	self.x = self.body:getX()
-	self.y = self.body:getY()
-
-	self.last_frame = self.img_frame
-	self.anim:update(dt)
 end
 
 function Object:draw()
