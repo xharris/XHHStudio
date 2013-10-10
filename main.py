@@ -1773,17 +1773,28 @@ class Grid():
 
     def draw(self):
         gl.glColor4f(0,0,0,.05)
-        for x in self.xArry[0::self.width]: # vertical lines
+        thickness = 3
+        # Draw the origin lines thicker
+        for t in range(thickness):
+            # vertical
+            pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (-camera[0]+t,W_HEIGHT,-camera[0]+t,0)))
+            pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (-camera[0]-t,W_HEIGHT,-camera[0]-t,0)))
+            # horizontal
+            pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (0,-camera[1]-t+W_HEIGHT+8,W_WIDTH,-camera[1]-t+W_HEIGHT+8)))
+            pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (0,-camera[1]+t+W_HEIGHT+8,W_WIDTH,-camera[1]+t+W_HEIGHT+8)))
+        # Vertical Lines
+        for x in self.xArry[0::self.width]:
             pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (x,W_HEIGHT,x,0)))
-        for y in self.yArry[0::self.height]: # horizontal lines (i know it's confusing)
+        # Horizontal Lines (I know it's confusing)
+        for y in self.yArry[0::self.height]:
             pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (0,y,W_WIDTH,y)))
 
     def reposition(self):
         self.y = W_HEIGHT - self.sy
         self.width = SNAPX
         self.height = SNAPY
-        xOff = (math.floor((camera[0])/SNAPX)*SNAPX)-math.floor(camera[0])
-        yOff = (math.floor((camera[1]+self.y)/SNAPY)*SNAPY)-math.floor(camera[1]+self.y)
+        xOff = (math.floor((-camera[0])/SNAPX)*SNAPX)-math.floor(-camera[0])
+        yOff = (math.floor((-camera[1]+self.y)/SNAPY)*SNAPY)-math.floor(-camera[1]+self.y)
         self.xArry = range(int(-xOff),W_WIDTH)
         self.yArry = range(int(-yOff),W_HEIGHT)#-int(self.y+((math.floor((camera[1])/SNAPY)*SNAPY))),W_HEIGHT)
 
@@ -1974,7 +1985,7 @@ def manageGUI():
         camera[1]-=camera_speed
         grid.reposition()
 
-    text = str(mouse[0]-camera[0])+' '+str(ORIGIN[1]-mouse[1]-camera[1])+'  ['+str(W_WIDTH)+'x'+str(W_HEIGHT)+']\n'
+    text = str(mouse[0]+camera[0]+4)+' '+str(ORIGIN[1]-mouse[1]-camera[1])+'  ['+str(W_WIDTH)+'x'+str(W_HEIGHT)+']\n'
     if len(lobjects['state'])>0:
         text += lobjects['state']['state'+str(state)]['name']
 
@@ -2296,7 +2307,6 @@ def saveGame(): # BIG PROBLEM: SAVES SOMETIMES
     editLevel(50)
     global has_changed,camera
     has_changed = False
-
 
     camera[0] = 0
     camera[1] = 0
