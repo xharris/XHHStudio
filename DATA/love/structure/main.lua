@@ -5,6 +5,9 @@ STATE=''
 
 backgroundColor = {255,255,255,255}
 
+ERR_LINE = 0
+ERR_FUNC = 'none'
+
 function love.load()
 	if notNil(main_preLoad) then main_preLoad() end
 	loaded = false
@@ -134,8 +137,10 @@ function onCollisionStart(a, b, coll)
 	    	if v.id == a['id'] then v1 = v end
 	    	if v.id == b['id'] then v2 = v end
 	    end
-		if not v2 == nil then v1:collision(v2) end
-		if not v1 == nil then v2:collision(v1) end
+		--if not v2 == nil then v1:collision(v2) end
+		--if not v1 == nil then v2:collision(v1) end
+		pcall(v1:collision(),v2)
+		pcall(v2:collision(),v1)	
     --DBG.print(a['name'].." started collision with "..b['name'].." with a vector normal of: "..x..", "..y)
 end
 
@@ -149,8 +154,10 @@ function onCollisionEnd(a, b, coll)
 	    	if v.id == a['id'] then v1 = v end
 	    	if v.id == b['id'] then v2 = v end
 	    end
-	    if not v2 == nil then v1:collisionEnd(v2) end
-	    if not v1 == nil then v2:collisionEnd(v1) end
+	    --if not v2 == nil then v1:collisionEnd(v2) end
+	    --if not v1 == nil then v2:collisionEnd(v1) end
+		pcall(v1:collisionEnd(),v2)
+		pcall(v2:collisionEnd(),v1)	
     --DBG.print(a['name'].." uncolliding with "..b['name'])
 end
 
@@ -158,14 +165,16 @@ function onColliding(a, b, coll)
 	    coll:setEnabled(false)
 		a = a:getUserData()
 	    b = b:getUserData()
-	    v1 = nil
-	    v2 = nil
+	    --v1 = nil
+	    --v2 = nil
 	    for i,v in ipairs(objects) do
 	    	if v.id == a['id'] then v1 = v end
 	    	if v.id == b['id'] then v2 = v end
 	    end
-		if not v2 == nil then v1:inCollision(v2) end
-	    if not v1 == nil then v2:inCollision(v1) end
+		--if not v2 == nil then v1:inCollision(v2) end
+	    --if not v1 == nil then v2:inCollision(v1) end
+		pcall(v2:inCollision(),v1)
+		pcall(v1:inCollision(),v2)
     --DBG.print(a['name'].." in a collision with "..b['name'])
 end
 	
@@ -185,8 +194,8 @@ function contFilter(a,b)
     return True
 end
 
---[[
 local function error_printer(msg, layer)
+	print(tostring(msg))
     print((debug.traceback("Error: " .. tostring(msg), 1+(layer or 1)):gsub("\n[^\n]+$", "")))
 end
 
@@ -195,70 +204,62 @@ function love.errhand(msg)
 
     error_printer(msg, 2)
 
-    if not love.window or not love.graphics or not love.event then
+    if not love.graphics or not love.event or not love.graphics.isCreated() then
         return
     end
 
-    if not love.graphics.isCreated() or not love.window.isCreated() then
-        if not pcall(love.window.setMode, 800, 600) then
-            return
-        end
-    end
-
-    -- Load.
     if love.audio then love.audio.stop() end
     love.graphics.reset()
-    love.graphics.setBackgroundColor(89, 157, 220)
-    local font = love.graphics.newFont(14)
-    love.graphics.setFont(font)
+    love.graphics.setBackgroundColor(0,0,0)
+	
+	font_path = "LIB_IMG/terminus.ttf"
+    font_obj = love.graphics.newFont(font_path,30)
+	font_line = love.graphics.newFont(font_path,18) 
+	font_msg = love.graphics.newFont(font_path,19)
 
-    love.graphics.setColor(255, 255, 255, 255)
-
-    local trace = debug.traceback()
+    love.graphics.setColor(255,255,255,255)
 
     love.graphics.clear()
-    love.graphics.origin()
-
-    local err = {}
-
-    table.insert(err, "Error\n")
-    table.insert(err, msg.."\n\n")
-
-    for l in string.gmatch(trace, "(.-)\n") do
-        if not string.match(l, "boot.lua") then
-            l = string.gsub(l, "stack traceback:", "Traceback\n")
-            table.insert(err, l)
-        end
-    end
-
-    local p = table.concat(err, "\n")
-
-    p = string.gsub(p, "\t", "")
-    p = string.gsub(p, "%[string \"(.-)\"%]", "%1")
+	
+	-- Format the error string
+	err_obj = 'Object'
+	err_line = 0
+	err_msg = 'nothing here!'
+	
+	-- extract the line number
+	c1 = string.find(msg,':')
+	c2 = string.find(msg,':',c1+1)
+	
+	err_obj = string.sub(msg,0,c1-5)..':'..ERR_FUNC..'()'
+	err_line = tonumber(string.sub(msg,c1+1,c2-1))--ERR_LINE
+	err_msg = string.sub(msg,c2+2)
 
     local function draw()
         love.graphics.clear()
-        love.graphics.printf(p, 70, 70, love.graphics.getWidth() - 70)
+		love.graphics.setFont(font_obj)
+        love.graphics.printf(err_obj,0,70,love.graphics.getWidth() - 70,'center')
+		love.graphics.setFont(font_line)
+		love.graphics.printf('Line '..tostring(err_line),0,110,love.graphics.getWidth()-70,'center')
+		love.graphics.setFont(font_msg)
+		love.graphics.printf(err_msg,0,140,love.graphics.getWidth()-70,'center')
         love.graphics.present()
     end
 
-    while true do
-        love.event.pump()
+    draw()
 
-        for e, a, b, c in love.event.poll() do
-            if e == "quit" then
-                return
-            end
-            if e == "keypressed" and a == "escape" then
-                return
-            end
+    local e, a, b, c
+    while true do
+        e, a, b, c = love.event.wait()
+
+        if e == "quit" then
+            return
+        end
+        if e == "keypressed" and a == "escape" then
+            return
         end
 
         draw()
 
-        if love.timer then
-            love.timer.sleep(0.1)
-        end
     end
+
 end
-]]--

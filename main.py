@@ -1,4 +1,4 @@
- #! usr/env/bin python
+#! usr/env/bin python
 #
 # XHH STUDIO - A sloppy attempt at developing the world's simplest game making software
 # Started May 18, 2013
@@ -38,13 +38,14 @@ import wxSimpleInput as wxSI
 import wxCodeEdit as wxCE
 from polygon import Polygon
 
+# mac apparently doesn't need ntpath? idk it just had problems
 if OS == 'mac':
     pass
 else:
     import ntpath
 
 # GLOBAL VARIABLES
-CAPTION = 'XHH STUDIO (unoffical early nightly secret alpha build)'
+CAPTION = 'XHH STUDIO "Cheese"'
 W_WIDTH = 800
 W_HEIGHT = 600
 
@@ -57,6 +58,15 @@ SNAPX = 20
 SNAPY = 20
 SAVE_EXT = '.xhh'
 SHOWLOG = True
+
+# Grid constants
+# thickness of line at origin and border
+THICKNESS = 3
+GRID_COLOR = [0,0,0,.05]
+
+# counteract for off coordinates. resets in LoadSettings()
+CAM_RESETX = -(THICKNESS-1)
+CAM_RESETY = 6+THICKNESS
 
 MIN_VISIBILITY = 30
 
@@ -118,7 +128,10 @@ mouse_rel = [0,0,0,0] # x, y, button, modifiers (mouse release)
 mouse_drag = [0,0,0,0]
 mouse_s = [0,0] # scroll_x, scroll_y
 
-camera = [0,0]
+key = pyglet.window.key
+KEYS = key.KeyStateHandler()
+
+camera = [CAM_RESETX,CAM_RESETY]
 camera_speed = 20
 
 entity_hover_txt = ''
@@ -207,6 +220,10 @@ def loadSettings(newSettings=False,typ='IDE'):
                         if 't' in val.lower(): val = True
                         elif 'f' in val.lower(): val = False
                         globals()[SETTINGS[s][i][0]] = val
+        
+        global camera
+        # counteract for off coordinates
+        camera = [CAM_RESETX,CAM_RESETY]
 
 
 def run_once(f):
@@ -224,6 +241,7 @@ def resetRunOnce():
     loadFile.has_run = False
     showDialog.has_run = False
     showTextEdit.has_run = False
+    saveGame.has_run = False
     runGame.has_run = False
     buildGame.has_run = False
 
@@ -415,7 +433,10 @@ def imagePart(img_path,frame,rows,columns): # returns part of a sprite sheet
     ch = columns
     img = pyglet.image.load(img_path)
     seq = pyglet.image.ImageGrid(img,rows,columns)
-    seq = seq[frame]
+    try: # selecting an object with fewer frames gave me an error
+        seq = seq[frame]
+    except: 
+        seq = seq[0]
     return seq
 
 # LABELS ----------------------------------------------------------------------
@@ -750,6 +771,9 @@ class Entity(): # the objects that are placed in the project
         self.dragoff[1] = mouse[1]
         self.draggable = False
         self.dragging = False
+        
+        # delete key press and release flag
+        self.del_press = False
 
         self.destroying = False
 
@@ -780,14 +804,16 @@ class Entity(): # the objects that are placed in the project
             self.save['state'] = self.state
             if len(self.data['images']) > 0:
                 self.image = imagePart(project_img_path+self.data['images'][self.img_ani]['path'],self.img_index,self.data['images'][self.img_ani]['rows'],self.data['images'][self.img_ani]['columns'])
-                self.sprite.image = self.image
-                self.sprite.rotation = self.img_angle
-                self.w = self.image.width
-                self.h = self.image.height
-                self.sprite.image.anchor_x = self.w/2
-                self.sprite.image.anchor_y = self.h/2
-                self.sprite.group = getDepthCell(self.depth)
-
+                try:
+                    self.sprite.image = self.image
+                    self.sprite.rotation = self.img_angle
+                    self.w = self.image.width
+                    self.h = self.image.height
+                    self.sprite.image.anchor_x = self.w/2
+                    self.sprite.image.anchor_y = self.h/2
+                    self.sprite.group = getDepthCell(self.depth)
+                except:
+                    print('ERROR 786: That damn no attribute id error')
     def update(self):
         #self.x,self.y = self.,int(self.y)
         self.sprite.x,self.sprite.y = self.x-camera[0],self.y-camera[1]
@@ -804,16 +830,27 @@ class Entity(): # the objects that are placed in the project
             x = self.sprite.x-self.sprite.width/2
             y = self.sprite.y-self.sprite.height/2
 
+            # Mouse is inside entity
             if mx > x and mx < x + self.w and my > y and my < y + self.h and not edit_visible:
-                global entity_hover_txt,entity_hover_obj
+                global entity_hover_txt,entity_hover_obj,key
                 mouseAct('entity')
+                
+                # if not in the edit screen (gray overlay screen)
                 if not edit_entity:
                     if entity_hover_obj == None or self.depth <= entity_hover_obj.depth:
                         entity_hover_txt = self.name+' ('+str(self.x)+','+str(ORIGIN[1]-self.y)+')'
                         entity_hover_obj = self
-                #mouseAct('entity')
-                if mouse_rel[2] == 4 and not edit_entity:
-                    eEdit = Entity_Edit(obj=self)
+                        
+                        # delete self when hovering and backspace/delete has been released
+                        if (KEYS[key.BACKSPACE] or KEYS[key.DELETE]):
+                            if not self.del_press:
+                                self.del_press = True
+                        elif self.del_press:
+                            self.del_press = False
+                            self.destroy()   
+                        
+                        if mouse_rel[2] == 4:
+                            eEdit = Entity_Edit(obj=self)
 
                 if moving: hover_tip.text = 'drag '+self.name
 
@@ -875,6 +912,9 @@ class Entity(): # the objects that are placed in the project
                             self.pressed = False
             else:
                 if not self.dragging: self.draggable = False
+                
+                # if delete key was pressed, reset it when mouse stops hovering
+                self.del_press = False
 
             if mouse[2]==1:
                 self.dragoff[0] = mouse[0]-self.x
@@ -1772,16 +1812,24 @@ class Grid():
         addObject(self)
 
     def draw(self):
-        gl.glColor4f(0,0,0,.05)
-        thickness = 3
-        # Draw the origin lines thicker
-        for t in range(thickness):
-            # vertical
+        gl.glColor4f(GRID_COLOR[0],GRID_COLOR[1],GRID_COLOR[2],GRID_COLOR[3])
+        lset = lobjects['settings']
+        # Draw the origin lines and window border thicker
+        for t in range(THICKNESS):
+            # vertical      ORIGIN
             pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (-camera[0]+t,W_HEIGHT,-camera[0]+t,0)))
             pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (-camera[0]-t,W_HEIGHT,-camera[0]-t,0)))
-            # horizontal
+            #               BORDER
+            pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (-camera[0]+t+lset[7][2],W_HEIGHT,-camera[0]+t+lset[7][2],0)))
+            pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (-camera[0]-t+lset[7][2],W_HEIGHT,-camera[0]-t+lset[7][2],0)))
+            
+            # horizontal    ORIGIN
             pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (0,-camera[1]-t+W_HEIGHT+8,W_WIDTH,-camera[1]-t+W_HEIGHT+8)))
             pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (0,-camera[1]+t+W_HEIGHT+8,W_WIDTH,-camera[1]+t+W_HEIGHT+8)))
+            #               BORDER
+            pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (0,-camera[1]-t+W_HEIGHT-lset[8][2],W_WIDTH,-camera[1]-t+W_HEIGHT-lset[8][2])))
+            pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (0,-camera[1]+t+W_HEIGHT-lset[8][2],W_WIDTH,-camera[1]+t+W_HEIGHT-lset[8][2])))
+        
         # Vertical Lines
         for x in self.xArry[0::self.width]:
             pyglet.graphics.draw(2,gl.GL_LINES, ('v2i', (x,W_HEIGHT,x,0)))
@@ -1882,8 +1930,8 @@ def manageGUI():
         sel_spr.x = mouse[0]#+sel_spr.image.width/2
         sel_spr.y = mouse[1]+5#+sel_spr.image.height/2
     else: # snap the cursor to the grid     FIX so that snap works when camera moves
-        sel_spr.x = (math.floor((mouse[0])/SNAPX)*SNAPX)+sel_spr.image.width/2
-        sel_spr.y = (math.floor((mouse[1]-5)/SNAPY)*SNAPY)+sel_spr.image.height/2
+        sel_spr.x = (math.floor((mouse[0])/SNAPX)*SNAPX)+sel_spr.image.width/2#-math.floor(((camera[0])/SNAPX)*SNAPX)
+        sel_spr.y = (math.floor((mouse[1]-5)/SNAPY)*SNAPY)+8#+sel_spr.image.height/2+(SNAPY/2)#+math.floor(((camera[1])/SNAPY)*SNAPY)
 
     if KEYS[key.LCTRL] or KEYS[key.RCTRL]:
         if mouse_act != '':
@@ -1950,8 +1998,8 @@ def manageGUI():
                             else:
                                 sel_pressed = True
                             sel_spr.image = imagePart(project_img_path+curr_lobj['images'][sel_img_ani]['path'],sel_img_index,curr_lobj['images'][sel_img_ani]['rows'],curr_lobj['images'][sel_img_ani]['columns'])
-                            #sel_spr.image.anchor_x = sel_spr.image.width/2
-                            #sel_spr.image.anchor_y = sel_spr.image.height/2
+                            sel_spr.image.anchor_x = sel_spr.image.width/2
+                            sel_spr.image.anchor_y = sel_spr.image.height/2
                             sel_spr.rotation = sel_img_angle
 
                     elif not KEYS[key.W] and not KEYS[key.A] and not KEYS[key.S] and not KEYS[key.D] and not KEYS[key.Q] and not KEYS[key.E] and not KEYS[key.R]:
@@ -2308,8 +2356,10 @@ def saveGame(): # BIG PROBLEM: SAVES SOMETIMES
     global has_changed,camera
     has_changed = False
 
-    camera[0] = 0
-    camera[1] = 0
+    camera[0] = CAM_RESETX
+    camera[1] = CAM_RESETY
+    
+    grid.reposition()
 
     for f in lobjects['font']:
         p = moveToLibrary(lobjects['font'][f]['path'],'FONTS')
@@ -2344,7 +2394,6 @@ def saveGame(): # BIG PROBLEM: SAVES SOMETIMES
     for i,s in enumerate(lobjects['state']):
         newlobj['settings']['stateName'].append(lobjects['state'][s]['name'])
         newlobj['settings']['stateCode'].append(lobjects['state'][s]['code'])
-
 
     for s in lobjects['settings']:
         newlobj['settings']['game'].append(s[2])
@@ -2573,8 +2622,6 @@ window = pyglet.window.Window(W_WIDTH,W_HEIGHT,resizable=True)
 
 initGUI()
 pyglet.clock.set_fps_limit(FPS)
-key = pyglet.window.key
-KEYS = key.KeyStateHandler()
 window.push_handlers(KEYS)
 
 @window.event
@@ -2596,9 +2643,10 @@ def on_draw():
 
 @window.event
 def on_resize(w,h):
-    global W_WIDTH,W_HEIGHT
+    global W_WIDTH,W_HEIGHT,ORIGIN
     W_WIDTH = w
     W_HEIGHT = h
+    ORIGIN = [0,W_HEIGHT]
     for o in objects:
         try:
             o.reposition()

@@ -1,63 +1,63 @@
 --require('main')
 
-class "Object"{
-	name = "Object";
-	id=0;
-	x=0;
-	y=0;
-	z=0;
-	prevx = 0;
-	prevy = 0;
-	prevz = 0;
-	hspeed=0;
-	vspeed=0;
-	direction=0;
-	speed=0;
-	animation="";
-	animation_index=1;
-	ANIMATIONS={};
-	img_speed=0;
-	img_frame=1;
-	img_alpha=255;
-	img_angle=0;
-	img_sx=1; --scale x
-	img_sy=1; --scale y
-	img_ox=0; --offset x
-	img_oy=0; --offset y
-	img_width = 0;
-    img_height = 0;
-    last_frame=1;
-    blend_mode='';
-	FRAMES=0;
-	body=0;
-    HITBOXES={};
-    GRAVITY=0;
-    gravity=0;
-    gravity_direction=270;
-    density=1; -- same thing as 'solid' except different layers
-    solid=true;
-    mass=0;
-    inertia=0;
-    physics=False; -- by default physics is off
-    colliding = false;
-    collision_start = false;
-    collision_end = false;
-    stop_on_collision=false;
-    type = "dynamic";
+Object = class:new()
+	Object.name = "Object";
+	Object.id=0;
+	Object.x=0;
+	Object.y=0;
+	Object.z=0;
+	Object.prevx = 0;
+	Object.prevy = 0;
+	Object.prevz = 0;
+	Object.hspeed=0;
+	Object.vspeed=0;
+	Object.direction=0;
+	Object.speed=0;
+	Object.animation="";
+	Object.animation_index=1;
+	Object.ANIMATIONS={};
+	Object.img_speed=0;
+	Object.img_frame=1;
+	Object.img_alpha=255;
+	Object.img_angle=0;
+	Object.img_sx=1; --scale x
+	Object.img_sy=1; --scale y
+	Object.img_ox=0; --offset x
+	Object.img_oy=0; --offset y
+	Object.img_width = 0;
+    Object.img_height = 0;
+    Object.last_frame=1;
+    Object.blend_mode='';
+	Object.FRAMES=0;
+	Object.body=0;
+    Object.HITBOXES={};
+    Object.GRAVITY=0;
+    Object.gravity=0;
+    Object.gravity_direction=270;
+    Object.density=1; -- same thing as 'solid' except different layers
+    Object.solid=true;
+    Object.mass=0;
+    Object.inertia=0;
+    Object.physics=False; -- by default physics is off
+    Object.colliding = false;
+    Object.collision_start = false;
+    Object.collision_end = false;
+    Object.stop_on_collision=false;
+    Object.type = "dynamic";
 
-	anim=nil;--newAnimation();
-	_crosshair = love.graphics.newImage("LIB_IMG/crosshair.png");
+	Object.anim=nil;--newAnimation();
+	Object._crosshair = love.graphics.newImage("LIB_IMG/crosshair.png");
 
-	draw_hitbox=false;
-	top=0;
-	bottom=0;
-	left=0;
-	right=0;
+	Object.draw_hitbox=false;
+	Object.top=0;
+	Object.bottom=0;
+	Object.left=0;
+	Object.right=0;
 	
-	dead=false;
-}
+	Object.dead=false;
 
-function Object:__init(...)
+
+function Object:init(...)
 	self.x = arg[1] or 0
 	self.y = arg[2] or 0
     table.remove(arg,1)
@@ -70,7 +70,7 @@ function Object:__init(...)
     self.body=love.physics.newBody(phys_world,0,0,self.type)
     self.fixture=love.physics.newFixture(self.body,self.HITBOXES[1],self.density);
     udata = {}
-    udata['name']=self.name
+    udata['name']=self.name 
     udata['id']=self.id
     self.fixture:setUserData(udata)
     self.body:setMass(0)
@@ -108,9 +108,11 @@ function Object:update(dt)
 	self.y = self.body:getY()
 	if self.anim ~= nil then
 		self.anim:setSpeed(self.img_speed)
+		--[[
 		curr_ani = self.ANIMATIONS[self.animation_index]
 	    self.img_width = curr_ani['width']
     	self.img_height = curr_ani['height']
+		]]--
 --[[
 	    if self.last_frame ~= self.img_frame then -- if frame has changed, update the fixture (hitpoints)
 	        self.fixture:destroy()
@@ -139,10 +141,10 @@ function Object:update(dt)
 	prevy=self.y
 	self.prevz=self.z
 
-	self.top = self.y
-	self.bottom = self.y + self.img_height
-	self.left = self.x
-	self.right = self.x + self.img_width
+	self.top = self.y-self.img_height/2
+	self.bottom = self.y + self.img_height/2
+	self.left = self.x-self.img_width/2
+	self.right = self.x + self.img_width/2
 
 	--if self.colliding then self.inCollision(self.colliding) end
 	if notNil(self.onUpdate) then self:onUpdate(dt) end

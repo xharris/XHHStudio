@@ -21,6 +21,9 @@ COLORS = {
 ["pink"]= {255,192,203}
 }
 
+mouse_x = love.mouse.getX()
+mouse_y = love.mouse.getY()
+
 function with(name,func,...)
 	for k,d in ipairs(objects) do
 		if name == 'all' then

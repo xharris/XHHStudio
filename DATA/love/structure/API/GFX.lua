@@ -2,6 +2,8 @@
 
 GFX = {}
 
+GFX.color = "black"
+
 GFX.newImage = function(path)
 	path = path or ''
 	return love.graphics.newImage("IMAGES/"..path)
@@ -13,14 +15,25 @@ GFX.newAnimation = function(image,width,height,speed,frames)
     newAnimation(image,width,height,ani_spd,frames)
 end
 
-GFX.drawText = function(text,x,y,color)
+GFX.setColor = function(newColor)
+	GFX.color = newColor or "black"
+end
+
+GFX.text = function(x,y,text)
 	t = text or ''
 	tx = x or 0
 	ty = y or 0
-	c = color or "black"
-	c = COLORS[c]
-	love.graphics.setColor(c)
+	love.graphics.setColor(COLORS[GFX.color])
 	love.graphics.print(t,tx,tx)
+end
+
+GFX.line = function(...)
+	love.graphics.setLineWidth(arg[1])
+	love.graphics.setColor(COLORS[GFX.color])
+	table.remove(arg,1)
+	for i = 1,#arg,4 do
+		love.graphics.line(arg[i],arg[i+1],arg[i+2],arg[i+3])
+	end
 end
 
 GFX.colorRGB = function(color)

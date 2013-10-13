@@ -57,7 +57,8 @@ def exportSrc(opersys='windows'): # build to which os?
         d = d.replace('~','')
         if d == 'EFFECTS':
             requireStr += 'if love.graphics.isSupported("pixeleffect") then require("API/'+d+'") end\n'
-        else:
+        elif not d in ['.DS_Store']: # file names that just shouldn't be there
+            
             requireStr += 'require("API/'+d+'")\n'
 
     other_requires = ['math','game','custom','start','main_extra']
@@ -152,15 +153,19 @@ def exportSrc(opersys='windows'): # build to which os?
             if code in lobj['code']:
                 if not code=='onDraw' and not code=='onCreate':
                     template += functemp+'\n'
+                    template += '\nERR_FUNC = "'+code+'"\nERR_LINE = debug.getinfo(1).currentline\n'
                     template += lobj['code'][code]
                 elif code == 'onCreate':
                     template += functemp+'\n'
                     for a in add:
                         template += a[1]+'\n'
+                    template += '\nERR_FUNC = "'+code+'"\nERR_LINE = debug.getinfo(1).currentline\n'
                     template+=lobj['code'][code]+'\naddObj(self)\n'
                 elif code == 'onDraw':
                     if len(lobj['code']['onDraw'])>2:
-                        template += 'function '+name+':onDraw()\n'+lobj['code']['onDraw']
+                        template += 'function '+name+':onDraw()\n'
+                        template += '\nERR_FUNC = "'+code+'"\nERR_LINE = debug.getinfo(1).currentline\n'
+                        template += lobj['code']['onDraw']
                     else:
                         template += functemp+'\n'
                 template += '\nend\n\n'

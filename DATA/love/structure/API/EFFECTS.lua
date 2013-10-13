@@ -1,12 +1,13 @@
 
 
 --ARGS (x,y)
-class "E_shockwave"{
-	name = "E_shockwave";
-	enabled = false;
 
-	time = 0;
-	pixeleffect=love.graphics.newPixelEffect[[
+E_shockwave = class:new()
+	E_shockwave.name = "E_shockwave";
+	E_shockwave.enabled = false;
+
+	E_shockwave.time = 0;
+	E_shockwave.pixeleffect=love.graphics.newPixelEffect[[
 			extern vec2 center; // Center of shockwave
 			extern number time; // effect elapsed time
 			extern vec3 shockParams; // 100.0, 8, 100
@@ -29,7 +30,7 @@ class "E_shockwave"{
 				// return color * vec4(tc, texcolor.a);
 			}
 		]];
-}
+
 function E_shockwave:setParameters(p)
 	for k,v in pairs(p) do
 		self.pixeleffect:send(k,v)
