@@ -1922,12 +1922,25 @@ sel_img_index = 0
 sel_img_ani = 0
 sel_img_angle = 0
 
+# show the full image when changing the sprite frame
+TILE_OPACITY = 100
+TILE_VANISH_RATE = 5
+
+tile_spr = pyglet.sprite.Sprite(sel_img,batch=images,group=getDepthCell(-10000))
+tile_offX = 0
+tile_offY = 0
+
 def resetPlacer(): # used when deleting a library object and not letting a user place that deleted object
     global curr_lobj
     curr_lobj = None
 
 def manageGUI():
-    global mouse,mouse_rel,sel_img,sel_spr,camera,camera_text,entity_hover_txt,edit_entity,sel,moving,sel_pressed,sel_img_index,sel_img_ani,sel_img_angle,runonce_timer,fullscreen
+    global mouse,mouse_rel,sel_img,sel_spr,camera,camera_text,entity_hover_txt,edit_entity,sel,moving,sel_pressed,sel_img_index,sel_img_ani,sel_img_angle,runonce_timer,fullscreen,tile_spr,tile_offX,tile_offY
+    # full image preview vanish
+    if tile_spr.opacity > TILE_VANISH_RATE*2:
+        tile_spr.opacity -= TILE_VANISH_RATE
+    else:
+        tile_spr.opacity = 0
     # selection sprite at cursor
     if KEYS[key.LSHIFT] or KEYS[key.RSHIFT]:
         sel_spr.x = mouse[0]
@@ -1937,6 +1950,9 @@ def manageGUI():
         camOffy = math.floor(camera[1]-(((camera[1])/SNAPY)*SNAPY))
         sel_spr.x = (math.floor((mouse[0]-4+(SNAPX/4)+camOffx)/SNAPX)*SNAPX)+sel_spr.image.width/2-camOffx
         sel_spr.y = (math.floor((mouse[1]+camOffy+(SNAPY/4))/SNAPY)*SNAPY)+(sel_spr.image.height/2)-camOffy
+        
+        tile_spr.x = sel_spr.x-sel_spr.image.width/2+tile_offX
+        tile_spr.y = sel_spr.y-sel_spr.image.height/2+tile_offY
 
     if KEYS[key.LCTRL] or KEYS[key.RCTRL]:
         if mouse_act != '':
@@ -1967,7 +1983,7 @@ def manageGUI():
                         aniI = len(curr_lobj['images'])-1
 
                         if KEYS[key.A]: # prev frame
-                            if sel_img_index >= 0: sel_img_index -= 1
+                            if sel_img_index > 0: sel_img_index -= 1
                             else:
                                 sel_img_index = framesI
                         if KEYS[key.D]: # next frame
@@ -2006,6 +2022,14 @@ def manageGUI():
                             sel_spr.image.anchor_x = sel_spr.image.width/2
                             sel_spr.image.anchor_y = sel_spr.image.height/2
                             sel_spr.rotation = sel_img_angle
+                            
+                            image = curr_lobj['images'][sel_img_ani]
+                            
+                            tile_spr.image = pyglet.image.load(project_img_path+curr_lobj['images'][sel_img_ani]['path'])
+                            tile_spr.opacity = TILE_OPACITY
+                            
+                            tile_offX = -sel_spr.image.width*(sel_img_index-(math.floor(sel_img_index/image['columns'])*image['columns']))
+                            tile_offY = -sel_spr.image.height*int(sel_img_index/(image['rows']))
 
                     elif not KEYS[key.W] and not KEYS[key.A] and not KEYS[key.S] and not KEYS[key.D] and not KEYS[key.Q] and not KEYS[key.E] and not KEYS[key.R]:
                             sel_pressed = False
