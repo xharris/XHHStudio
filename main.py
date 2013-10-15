@@ -12,6 +12,9 @@
 #
 import pyglet, math, random, gc, os, sys, ConfigParser, subprocess, threading, Queue, time, shutil, wx, pickle, json, ast, inspect, zipfile, tempfile
 
+# Weird windows 7 bug fix
+os.environ['PYGLET_SHADOW_WINDOW']="0"
+
 # What OS is this running on?
 OS = 'NONE'
 opersys = sys.platform
@@ -1927,11 +1930,13 @@ def manageGUI():
     global mouse,mouse_rel,sel_img,sel_spr,camera,camera_text,entity_hover_txt,edit_entity,sel,moving,sel_pressed,sel_img_index,sel_img_ani,sel_img_angle,runonce_timer,fullscreen
     # selection sprite at cursor
     if KEYS[key.LSHIFT] or KEYS[key.RSHIFT]:
-        sel_spr.x = mouse[0]#+sel_spr.image.width/2
-        sel_spr.y = mouse[1]+5#+sel_spr.image.height/2
-    else: # snap the cursor to the grid     FIX so that snap works when camera moves
-        sel_spr.x = (math.floor((mouse[0])/SNAPX)*SNAPX)+sel_spr.image.width/2#-math.floor(((camera[0])/SNAPX)*SNAPX)
-        sel_spr.y = (math.floor((mouse[1]-5)/SNAPY)*SNAPY)+8#+sel_spr.image.height/2+(SNAPY/2)#+math.floor(((camera[1])/SNAPY)*SNAPY)
+        sel_spr.x = mouse[0]
+        sel_spr.y = mouse[1]+5
+    else: # snap the cursor to the grid
+        camOffx = math.floor(camera[0]-(((camera[0])/SNAPX)*SNAPX))
+        camOffy = math.floor(camera[1]-(((camera[1])/SNAPY)*SNAPY))
+        sel_spr.x = (math.floor((mouse[0]-4+(SNAPX/4)+camOffx)/SNAPX)*SNAPX)+sel_spr.image.width/2-camOffx
+        sel_spr.y = (math.floor((mouse[1]+camOffy+(SNAPY/4))/SNAPY)*SNAPY)+(sel_spr.image.height/2)-camOffy
 
     if KEYS[key.LCTRL] or KEYS[key.RCTRL]:
         if mouse_act != '':
@@ -2146,12 +2151,15 @@ lib_catint = 0
 def del_lobj(lobj_cat,lobj_index):
     global entity_hover_txt
     keys = lobjects[lib_cat].keys()
-    removeEntities(lobjects[lib_cat][keys[index]]['name'])
-    tip_text.addText(lobjects[lib_cat][keys[index]]['name']+' deleted')
-    del lobjects[lobj_cat][keys[index]]
-    resetPlacer()
-    refreshLibraryText()
-    entity_hover_txt = ''
+    answer = showYesNo('Hold it!','Are you sure you want to delete "'+lobjects[lib_cat][keys[index]]['name']+'"?')
+    if answer == 0:
+        
+        removeEntities(lobjects[lib_cat][keys[index]]['name'])
+        tip_text.addText(lobjects[lib_cat][keys[index]]['name']+' deleted')
+        del lobjects[lobj_cat][keys[index]]
+        resetPlacer()
+        refreshLibraryText()
+        entity_hover_txt = ''
 
 
 # Draw the libray

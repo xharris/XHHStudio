@@ -1,4 +1,5 @@
 function Object:collision(other)
+	if self == nil then return end
 	self.stop_on_collision = false
 	self.colliding = other
 	

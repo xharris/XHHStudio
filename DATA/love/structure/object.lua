@@ -91,16 +91,10 @@ function Object:init(...)
 end
 
 function Object:destroy(args)
-	self.dead=true
-	id = self.id
-	self:onDestroy(args)
-	for k,d in ipairs(objects) do
-		if d.id == id then
-			table.remove(objects,k)
-		end
-	end
 	self.fixture:destroy()
 	self.body:destroy()
+	self:onDestroy(args)
+	self.dead=true
 end
 
 function Object:update(dt)

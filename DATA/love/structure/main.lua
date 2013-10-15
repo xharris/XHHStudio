@@ -9,6 +9,7 @@ ERR_LINE = 0
 ERR_FUNC = 'none'
 
 function love.load()
+	WIN._refresh()
 	if notNil(main_preLoad) then main_preLoad() end
 	loaded = false
 	--love.physics.setMeter(64)
@@ -27,7 +28,11 @@ function love.update(dt)
 	love.timer.sleep(.001)
 	for k,d in ipairs(objects) do
 		if notNil(d.update) and loaded then
-			d:update(dt)
+			if d.dead then
+				table.remove(objects,k)
+			else
+				d:update(dt)
+			end
 		end
 	end
     if notNil(EFFECTS) then
@@ -137,10 +142,12 @@ function onCollisionStart(a, b, coll)
 	    	if v.id == a['id'] then v1 = v end
 	    	if v.id == b['id'] then v2 = v end
 	    end
-		--if not v2 == nil then v1:collision(v2) end
-		--if not v1 == nil then v2:collision(v1) end
-		pcall(v1:collision(),v2)
-		pcall(v2:collision(),v1)	
+		if not (v1.dead and v2.dead) then
+		v1:collision(v2)
+		v2:collision(v1)
+		end
+		--pcall(v1.collision,v2)
+		--pcall(v2.collision,v1)	
     --DBG.print(a['name'].." started collision with "..b['name'].." with a vector normal of: "..x..", "..y)
 end
 
@@ -154,10 +161,12 @@ function onCollisionEnd(a, b, coll)
 	    	if v.id == a['id'] then v1 = v end
 	    	if v.id == b['id'] then v2 = v end
 	    end
-	    --if not v2 == nil then v1:collisionEnd(v2) end
-	    --if not v1 == nil then v2:collisionEnd(v1) end
-		pcall(v1:collisionEnd(),v2)
-		pcall(v2:collisionEnd(),v1)	
+		if not(v1.dead and v2.dead) then
+	    v1:collisionEnd(v2)
+	    v2:collisionEnd(v1)
+		end
+		--pcall(v1.collisionEnd,v2)
+		--pcall(v2.collisionEnd,v1)	
     --DBG.print(a['name'].." uncolliding with "..b['name'])
 end
 
@@ -171,10 +180,12 @@ function onColliding(a, b, coll)
 	    	if v.id == a['id'] then v1 = v end
 	    	if v.id == b['id'] then v2 = v end
 	    end
-		--if not v2 == nil then v1:inCollision(v2) end
-	    --if not v1 == nil then v2:inCollision(v1) end
-		pcall(v2:inCollision(),v1)
-		pcall(v1:inCollision(),v2)
+		if not(v1.dead and v2.dead) then
+		v1:inCollision(v2)
+	    v2:inCollision(v1)
+	end
+		--pcall(v2.inCollision,v1)
+		--pcall(v1.inCollision,v2)
     --DBG.print(a['name'].." in a collision with "..b['name'])
 end
 	
@@ -231,7 +242,7 @@ function love.errhand(msg)
 	c2 = string.find(msg,':',c1+1)
 	
 	err_obj = string.sub(msg,0,c1-5)..':'..ERR_FUNC..'()'
-	err_line = tonumber(string.sub(msg,c1+1,c2-1))--ERR_LINE
+	err_line = tonumber(string.sub(msg,c1+1,c2-1))-ERR_LINE
 	err_msg = string.sub(msg,c2+2)
 
     local function draw()

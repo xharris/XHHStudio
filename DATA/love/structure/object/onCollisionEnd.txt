@@ -1,2 +1,3 @@
 function Object:collisionEnd(other)
+	if self == nil then return end
 	self.colliding = false

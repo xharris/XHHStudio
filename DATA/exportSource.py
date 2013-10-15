@@ -57,8 +57,11 @@ def exportSrc(opersys='windows'): # build to which os?
         d = d.replace('~','')
         if d == 'EFFECTS':
             requireStr += 'if love.graphics.isSupported("pixeleffect") then require("API/'+d+'") end\n'
-        elif not d in ['.DS_Store']: # file names that just shouldn't be there
-            
+        canAdd = True
+        for ban in ['._','DS_Store']: # file names that just shouldn't be there (tempfiles,.DS_Store,etc)
+            if ban in d:
+                canAdd = False
+        if canAdd: 
             requireStr += 'require("API/'+d+'")\n'
 
     other_requires = ['math','game','custom','start','main_extra']
