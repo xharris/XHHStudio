@@ -1,4 +1,0 @@
-function Object:inCollision(other)
-	self.colliding = other
-	--DBG.print(other.name..' '..tostring(self.stop_on_collision))
-	

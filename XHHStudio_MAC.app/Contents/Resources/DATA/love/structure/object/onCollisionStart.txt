@@ -1,4 +1,0 @@
-function Object:collision(other)
-	self.stop_on_collision = false
-	self.colliding = other
-	

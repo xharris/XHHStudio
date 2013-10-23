@@ -10,7 +10,7 @@ from setuptools import setup
 APP = ['main.py']
 DATA_FILES = ['DATA']
 OPTIONS = {'argv_emulation': True,
-'iconfile': '/Users/XHH/Documents/XHH Studio/icon.icns'}
+'iconfile': '/Users/XHH/Documents/XHH_Studio/icon.icns'}
 
 setup(
     app=APP,

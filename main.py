@@ -10,7 +10,7 @@
 #
 # DONT FORGET THAT FUNCTIONS USING @RUN_ONCE MUST BE ADDED TO THE RESETRUNONCE LIST!!!!
 #
-import pyglet, math, random, gc, os, sys, ConfigParser, subprocess, threading, Queue, time, shutil, wx, pickle, json, ast, inspect, zipfile, tempfile
+import pyglet, math, random, gc, os, sys, ConfigParser, subprocess, threading, Queue, shutil, wx, pickle, json, ast, inspect, zipfile, tempfile
 
 # Weird windows 7 bug fix
 os.environ['PYGLET_SHADOW_WINDOW']="0"
@@ -35,6 +35,7 @@ if OS == 'linux' or OS == 'mac':   slash = '/'
 import pyglet.gl as gl
 from pprint import pprint
 from collections import OrderedDict
+from time import sleep
 
 import wxSimpleInput as wxSI
 #from wxSimpleInput import loadFile
@@ -1264,8 +1265,9 @@ class Sprite_Edit(Edit_PARENT):
                     }
                 lobjects['object'][self.obj]['images'].append(imgA)
 
-        for a in self.animes:
-            a.destroy()
+        # for a in self.animes  WILL NOT work for whatever reason. Stops one element short
+        for a in range(len(self.animes)):
+            self.animes[a-1].destroy()
 
         for e in lobjects['state']['state'+str(state)]['entities']:
             if e.__class__.__name__ == 'Entity':
@@ -1748,6 +1750,7 @@ class Build_Edit(Edit_PARENT):
                     ['MAC',         '(W_WIDTH/8)*4','(W_HEIGHT/4)*3'],
                     ['LINUX',       '(W_WIDTH/8)*6','(W_HEIGHT/4)*3']
                    ]
+                   
         for b in btn_info:
             self.btns.append(btn_BuildPlat(self,b[0],b[1],b[2]))
         self.btns.append(btn_closeEdit(self))
@@ -2028,8 +2031,10 @@ def manageGUI():
                             tile_spr.image = pyglet.image.load(project_img_path+curr_lobj['images'][sel_img_ani]['path'])
                             tile_spr.opacity = TILE_OPACITY
                             
+                            # the IF is for images with multiple rows. the ELSE is for images with only one row. I didn't think math could solve this problem.
                             tile_offX = -sel_spr.image.width*(sel_img_index-(math.floor(sel_img_index/image['columns'])*image['columns']))
-                            tile_offY = -sel_spr.image.height*int(sel_img_index/(image['rows']))
+                            if image['rows'] > 1: tile_offY = -sel_spr.image.height*int(sel_img_index/(image['rows']))
+                            else: tile_offY = -sel_spr.image.height*(sel_img_index-(math.floor(sel_img_index/image['rows'])*image['rows']))
 
                     elif not KEYS[key.W] and not KEYS[key.A] and not KEYS[key.S] and not KEYS[key.D] and not KEYS[key.Q] and not KEYS[key.E] and not KEYS[key.R]:
                             sel_pressed = False
@@ -2261,7 +2266,7 @@ def manageLibrary():
             keys = lobjects[lib_cat].keys() # because lobjects is a dict you cant just index it (lobjects[0])==NOPE
             if mouse[2]==1 and not edit_entity:
                 if lib_cat == 'object':
-                    if curr_lobj != lobjects[lib_cat][keys[index]]:tip_text.addText(lobjects[lib_cat][keys[index]]['name']+' selected')
+                    #if curr_lobj != lobjects[lib_cat][keys[index]]:tip_text.addText(lobjects[lib_cat][keys[index]]['name']+' selected')
                     lobj_name = keys[index]
                     curr_lobj = lobjects[lib_cat][keys[index]]
                     if len(curr_lobj['images']) > 0:
@@ -2271,7 +2276,7 @@ def manageLibrary():
                 if lib_cat == 'state':
                     global state
                     state = lobjects[lib_cat][keys[index]]['index']
-                    tip_text.addText(lobjects[lib_cat]['state'+str(state)]['name']+' selected')
+                    #tip_text.addText(lobjects[lib_cat]['state'+str(state)]['name']+' selected')
             if mouse[2]==4  and not edit_entity:
                 lobj_name = keys[index]
                 eEdit = Entity_Edit(obj=lobj_name,lobj_kind=lib_cat)
@@ -2501,7 +2506,7 @@ def loadGame():
             has_changed = False
             new = False
 
-            tip_text.addText('Game loaded!')
+            tip_text.addText('"'+pj_name+'" loaded!')
 
 
 
@@ -2513,7 +2518,7 @@ def exportSource(opersys='windows'): # build to which os?
     #temp_path = os.getcwd()+slash+pj_name#
     temp_path = tempfile.mkdtemp()+slash+pj_name
     print temp_path
-    expSrcF = open('DATA'+slash+'exportSource.py','r')
+    expSrcF = open('DATA'+slash+'love'+slash+'exportSource.py','r')
     expSrcS = expSrcF.read()
     expSrcF.close()
 
@@ -2537,12 +2542,7 @@ def buildGame(platform):
                 os.remove(build_path+slash+pj_name+'.love')
 
             # start writing the new one
-            zipp = zipfile.ZipFile(build_path+slash+pj_name+'.love', 'w', zipfile.ZIP_DEFLATED)
-            rootlen = len(temp_path) + 1
-            for base, dirs, files in os.walk(temp_path):
-                for file in files:
-                    fn = os.path.join(base, file)
-                    zipp.write(fn, fn[rootlen:])
+            buildLove(build_path+slash+pj_name+'.love')
 
             tip_text.clearText()
             tip_text.addText('.love file created!')
@@ -2579,22 +2579,49 @@ def buildGame(platform):
 
             tip_text.clearText()
             tip_text.addText('Windows EXE created!')
-
+            
+        if platform == 'MAC':
+            build_path += 'mac'
+            buildApp(build_path)
+            
+            tip_text.clearText()
+            tip_text.addText('Mac app created!')
+            
+            if OS == 'windows':
+                subprocess.Popen('explorer '+build_path+slash)
+            if OS == 'linux' or OS == 'mac':
+                subprocess.Popen('open '+build_path,shell=True,stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.read()
+            
+        if platform == 'LINUX':
+            build_path += 'linux'
+            buildLinux(build_path)
+            
+            tip_text.clearText()
+            tip_text.addText('Linux distribution created!')
+            
+            if OS == 'windows':
+                subprocess.Popen('explorer '+build_path+slash)
+            if OS == 'linux' or OS == 'mac':
+                subprocess.Popen('open '+build_path,shell=True,stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.read()
+            
     else:
         tip_text.clearText()
         tip_text.addText('Error exporting game :(')
 
 def buildLove(build_path):
-    if OS == 'windows' or OS == 'linux':
+    if OS in ['windows','linux','mac']:
         zipp = zipfile.ZipFile(build_path+slash+pj_name+'.love', 'w', zipfile.ZIP_DEFLATED)
         rootlen = len(temp_path) + 1
         for base, dirs, files in os.walk(temp_path):
             for file in files:
                 fn = os.path.join(base, file)
                 zipp.write(fn, fn[rootlen:])
-    if OS == 'mac':
+        return build_path+slash+pj_name+'.love'
+    elif OS == 'mac':
         result = subprocess.Popen('cd '+build_path+' && zip -9 -q -r '+pj_name+'.love .',shell=True,stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.read()
         print build_path
+        return build_path+slash+pj_name+'.love'
+
 
 def buildEXE(build_path):
     for dll in ['love.exe','DevIL.dll','OpenAL32.dll','SDL.dll']:
@@ -2608,6 +2635,45 @@ def buildEXE(build_path):
             
     if OS == 'linux' or OS == 'mac':
         result = subprocess.Popen('cd "'+build_path+'" && cat love.exe '+pj_name+'.love > '+pj_name+'.exe',shell=True,stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.read()
+ 
+def buildApp(build_path):
+    if OS == 'mac':
+        # Clean out the BUILD/mac to prevent an error in copytree
+        if os.path.exists(build_path):
+            shutil.rmtree(build_path)
+        app_dir = os.getcwd()+slash+'DATA'+slash+'love'+slash
+        shutil.copytree(os.getcwd()+slash+'DATA'+slash+'love'+slash+'love.app',build_path+slash+'love.app')
+        # Rename love.app to GAMENAME.app
+        app_dir = build_path+slash
+        shutil.move(app_dir+'love.app',app_dir+pj_name+'.app')
+        app_dir += pj_name+'.app'
+        # Build .love file and put it in GAME.app/Contents/Resources
+        loveFile = buildLove(build_path)
+        print loveFile
+        shutil.move(loveFile,app_dir+slash+'Contents'+slash+'Resources')
+        # Modify GAME.app/Contents/Info.plist
+        infoF = open(app_dir+slash+'Contents'+slash+'Info.plist','r')
+        infoS = infoF.read()
+        infoF.close()
+        
+        replacements = [['>org.love2d.love<','>com.XHHStudio.'+pj_name+'<'],
+                        ['>LOVE<','>'+pj_name+'<']]
+        for r in replacements:
+            infoS = infoS.replace(r[0],r[1])
+            
+        infoF = open(app_dir+slash+'Contents'+slash+'Info.plist','w+')
+        infoF.write(infoS)
+        infoF.close()
+        
+        #if not alreadyBuilt:
+            #shutil.rmtree(lovePath)
+
+def buildLinux(build_path):
+    if os.path.exists(build_path):
+        shutil.rmtree(build_path)
+    os.mkdir(build_path)
+    buildLove(build_path)
+    shutil.copyfile(os.getcwd()+slash+'DATA'+slash+'love'+slash+'README-linux.txt',build_path+slash+'README.txt')
 
 def removeEXEjunk(build_path):
     if os.path.isfile(build_path+slash+pj_name+'.exe'):
@@ -2640,6 +2706,7 @@ def runGame():
             #os.system('rm -Rf '+temp_path) # how to get rid of temporary directory??
             #shutil.rmtree(temp_path)
         print result
+        tip_text.addText(result)
         tip_text.clearText()
         tip_text.addText('Running Game!')
 

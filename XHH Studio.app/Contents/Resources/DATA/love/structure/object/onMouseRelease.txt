@@ -1,0 +1,8 @@
+function Object:mouserelease(screen_x,screen_y,button)
+	x = love.mouse.getX() * CAM.scaleX + CAM.x
+	y = love.mouse.getY() * CAM.scaleY + CAM.y
+	inside = false
+	if x > self.left and x < self.right and y > self.top and y < self.bottom then
+		inside = true
+	end
+	
